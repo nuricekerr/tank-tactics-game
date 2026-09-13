@@ -5,17 +5,15 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
     };
 }
 
-// --- SES SENTEZLEYİCİSİ (Web Audio API) ---
+// --- SES MOTORU (Web Audio API) ---
 var SoundFX = (function () {
     var ctx = null;
-
     function init() {
         try {
             if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
             if (ctx && ctx.state === 'suspended') ctx.resume();
         } catch(e) {}
     }
-
     return {
         init: init,
         playShoot: function (isBoss, isInfantry) {
@@ -181,7 +179,7 @@ var MAPS = [
         id: 'snow',
         name: 'Kutup Buzulu',
         bgColor: '#0c1622',
-        gridColor: 'rgba(0, 240, 255, 0.06)',
+        gridColor: 'rgba(0, 229, 255, 0.06)',
         wallColor: '#263238',
         enemyTypes: ['drone', 'flak', 'plasma', 'heavy']
     },
@@ -201,11 +199,11 @@ var currentMapIdx = 0;
 var UNIT_TYPES = {
     infantry: { name: 'Piyade Timi', category: 'infantry', unlockLevel: 1, cost: 1, hp: 350, speedMul: 3.5, rangeMul: 5.5, dmg: 85, reload: 0.35, size: [16, 16], color: '#8d6e63', barrelLen: 8 },
     assault: { name: 'Piyade Tankı', category: 'tank', unlockLevel: 1, cost: 3, hp: 1300, speedMul: 2.2, rangeMul: 7, dmg: 330, reload: 1.1, size: [28, 38], color: '#2e7d32', barrelLen: 22 },
-    engineer: { name: 'İstihkam Aracı', category: 'support', unlockLevel: 2, cost: 3, hp: 750, speedMul: 2.5, rangeMul: 6, dmg: -90, reload: 0.5, size: [22, 32], color: '#ff8f00', barrelLen: 12 },
+    engineer: { name: 'İstihkam Aracı', category: 'support', unlockLevel: 2, cost: 3, hp: 750, speedMul: 2.5, rangeMul: 6, dmg: -90, reload: 0.5, size: [22, 32], color: '#ff9100', barrelLen: 12 },
     flak: { name: 'Uçaksavar', category: 'vehicle', unlockLevel: 2, cost: 4, hp: 850, speedMul: 3.8, rangeMul: 8.5, dmg: 110, reload: 0.25, size: [24, 36], color: '#00838f', barrelLen: 16 },
-    heavy: { name: 'Ağır Muharebe', category: 'tank', unlockLevel: 3, cost: 5, hp: 2600, speedMul: 1.3, rangeMul: 11, dmg: 750, reload: 1.9, size: [34, 46], color: '#e65100', barrelLen: 28 },
+    heavy: { name: 'Ağır Muharebe', category: 'tank', unlockLevel: 3, cost: 5, hp: 2600, speedMul: 1.3, rangeMul: 11, dmg: 750, reload: 1.9, size: [34, 46], color: '#ff6d00', barrelLen: 28 },
     drone: { name: 'İntihar Dronu', category: 'air', unlockLevel: 4, cost: 3, hp: 280, speedMul: 5.5, rangeMul: 1.5, dmg: 1100, reload: 0.1, size: [14, 14], color: '#ff1744', barrelLen: 0 },
-    plasma: { name: 'Plazma Tankı', category: 'tank', unlockLevel: 5, cost: 6, hp: 2100, speedMul: 2.5, rangeMul: 9.5, dmg: 680, reload: 0.75, size: [32, 44], color: '#9c27b0', barrelLen: 26 },
+    plasma: { name: 'Plazma Tankı', category: 'tank', unlockLevel: 5, cost: 6, hp: 2100, speedMul: 2.5, rangeMul: 9.5, dmg: 680, reload: 0.75, size: [32, 44], color: '#aa00ff', barrelLen: 26 },
     boss: { name: 'KOMUTA TANKI', category: 'boss', unlockLevel: 99, cost: 0, hp: 10500, speedMul: 0.85, rangeMul: 11, dmg: 900, reload: 1.6, size: [56, 74], color: '#d50000', barrelLen: 38 }
 };
 
@@ -219,8 +217,8 @@ var PlayerData = {
 
     init: function () {
         try {
-            var lvl = parseInt(localStorage.getItem('tank_player_level'), 10);
-            if (!isNaN(lvl) && lvl > 0) this.level = lvl;
+            var lvlVal = parseInt(localStorage.getItem('tank_player_level'), 10);
+            if (!isNaN(lvlVal) && lvlVal > 0) this.level = lvlVal;
 
             var x = parseInt(localStorage.getItem('tank_player_xp'), 10);
             if (!isNaN(x) && x >= 0) this.xp = x;
@@ -344,7 +342,7 @@ var selectedCard = null;
 var mouse = { x: 0, y: 0, down: false };
 var animFrameId = null;
 
-// --- GELİŞMİŞ BİRİM MODELİ (GÖLGE & NEON DETAYLAR) ---
+// --- BİRİM SINIFI ---
 function Unit(typeKey, pos, dir, isBoss) {
     var template = UNIT_TYPES[typeKey] || UNIT_TYPES.assault;
     this.typeKey = typeKey;
@@ -383,7 +381,7 @@ Unit.prototype.update = function (dt, targets, allies) {
 
     if (!this.trackBroken && this.hp < this.maxhp * 0.35 && this.category === 'tank' && Math.random() < 0.02) {
         this.trackBroken = true;
-        addFloatText("PALET KIRILDI!", this.pos, '#ffab00');
+        addFloatText("PALET KIRILDI!", this.pos, '#ffb700');
     }
 
     if (this.hp < this.maxhp * 0.35) {
@@ -448,6 +446,7 @@ Unit.prototype.update = function (dt, targets, allies) {
         this.turretAngle += diffTurret * Math.min(1, dt * 5);
     }
 
+    // Bizim birlikler engelleri es geçer, sadece düşman takılır
     if (!isStopped && this.dir === -1) {
         var nextY = this.pos[1] + Math.sin(this.bodyAngle) * this.speed * dt;
         for (var o = 0; o < obstacles.length; o++) {
@@ -483,7 +482,7 @@ Unit.prototype.fire = function () {
         if (this.target) {
             this.target.hp = Math.min(this.target.maxhp, this.target.hp - this.damage);
             this.target.trackBroken = false;
-            addFloatText("TAMİR!", this.target.pos, '#00ff66');
+            addFloatText("TAMİR!", this.target.pos, '#00e676');
             SoundFX.playRepair();
         }
         return;
@@ -497,8 +496,8 @@ Unit.prototype.fire = function () {
         vel: [Math.cos(this.turretAngle) * k * 20, Math.sin(this.turretAngle) * k * 20],
         damage: this.damage,
         dir: this.dir,
-        color: (this.dir === 1) ? '#00f0ff' : '#ff0055',
-        glowColor: (this.dir === 1) ? 'rgba(0, 240, 255, 0.8)' : 'rgba(255, 0, 85, 0.8)'
+        color: (this.dir === 1) ? '#00e5ff' : '#ff1744',
+        glowColor: (this.dir === 1) ? 'rgba(0, 229, 255, 0.8)' : 'rgba(255, 23, 68, 0.8)'
     });
 
     SoundFX.playShoot(this.isBoss, this.category === 'infantry');
@@ -508,7 +507,7 @@ Unit.prototype.render = function (ctx) {
     ctx.save();
     ctx.translate(this.pos[0], this.pos[1]);
 
-    // 1. Zemin Koyu Gölgesi (3D Derinlik)
+    // Zemin Gölgesi
     ctx.save();
     ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.beginPath();
@@ -541,52 +540,27 @@ Unit.prototype.render = function (ctx) {
         ctx.stroke();
         ctx.restore();
     } else {
-        // Zırhlı Gövde
         ctx.save();
         ctx.rotate(this.bodyAngle + Math.PI / 2);
 
-        // Paletler
-        ctx.fillStyle = this.trackBroken ? '#ff0055' : '#141a22';
+        ctx.fillStyle = this.trackBroken ? '#ff1744' : '#141a22';
         var trackW = this.isBoss ? 7 : 5;
         ctx.fillRect(-this.size[0] / 2 - trackW / 2, -this.size[1] / 2, trackW, this.size[1]);
         ctx.fillRect(this.size[0] / 2 - trackW / 2, -this.size[1] / 2, trackW, this.size[1]);
 
-        // Palet Dişleri
-        ctx.strokeStyle = '#2d3748';
-        ctx.lineWidth = 1;
-        for (var py = -this.size[1] / 2 + 3; py < this.size[1] / 2; py += 5) {
-            ctx.beginPath();
-            ctx.moveTo(-this.size[0] / 2 - trackW / 2, py);
-            ctx.lineTo(-this.size[0] / 2 + trackW / 2, py);
-            ctx.moveTo(this.size[0] / 2 - trackW / 2, py);
-            ctx.lineTo(this.size[0] / 2 + trackW / 2, py);
-            ctx.stroke();
-        }
-
-        // Ana Gövde
         ctx.fillStyle = this.color;
         ctx.fillRect(-this.size[0] / 2, -this.size[1] / 2, this.size[0], this.size[1]);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
         ctx.lineWidth = 1.5;
         ctx.strokeRect(-this.size[0] / 2, -this.size[1] / 2, this.size[0], this.size[1]);
-
-        // Gövde Zırh Plakaları
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(-this.size[0] / 2 + 3, -this.size[1] / 2 + 4, this.size[0] - 6, this.size[1] - 8);
         ctx.restore();
 
-        // Kule ve Namlu
         ctx.save();
         ctx.rotate(this.turretAngle);
 
-        // Namlu
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(-this.recoil, -2.5, this.barrelLen, 5);
-        // Namlu Ağzı Alev Bastırıcı (Muzzle Brake)
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(this.barrelLen - this.recoil - 2, -3.5, 4, 7);
 
-        // Kule Yuvarlağı
         ctx.fillStyle = '#1e293b';
         ctx.beginPath();
         ctx.arc(0, 0, this.size[0] / 3, 0, Math.PI * 2);
@@ -595,22 +569,19 @@ Unit.prototype.render = function (ctx) {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Optik Periskop Merceği (Neon Parıltı)
-        ctx.fillStyle = (this.dir === 1) ? '#00f0ff' : '#ff0055';
+        ctx.fillStyle = (this.dir === 1) ? '#00e5ff' : '#ff1744';
         ctx.beginPath();
         ctx.arc(2, -2, 2.5, 0, Math.PI * 2);
         ctx.fill();
-
         ctx.restore();
     }
 
-    // Can Barı
     if (!this.isBoss) {
         var hpPct = Math.max(0, this.hp / this.maxhp);
         var barW = this.size[0] * 1.2;
         ctx.fillStyle = 'rgba(7, 10, 15, 0.8)';
         ctx.fillRect(-barW / 2, -this.size[1] / 2 - 9, barW, 4);
-        ctx.fillStyle = hpPct > 0.4 ? '#00ff66' : '#ff0055';
+        ctx.fillStyle = hpPct > 0.4 ? '#00e676' : '#ff1744';
         ctx.fillRect(-barW / 2, -this.size[1] / 2 - 9, barW * hpPct, 4);
     }
 
@@ -651,12 +622,19 @@ function triggerExplosion(pos, isBig) {
             life: 0.45,
             maxLife: 0.45,
             size: 3 + Math.random() * 4,
-            color: Math.random() > 0.3 ? '#ffb703' : '#ff0055'
+            color: Math.random() > 0.3 ? '#ff9100' : '#ffd600'
         });
     }
 }
 
-// --- OYUN SONU PANELİ ---
+// --- AŞAMA VE OYUN SONU AKIŞI ---
+function nextStageAction() {
+    if (lvl < 9) {
+        lvl++;
+    }
+    startGame();
+}
+
 function showEndModal(isWin) {
     isGameOver = true;
     if (animFrameId) cancelAnimationFrame(animFrameId);
@@ -671,40 +649,51 @@ function showEndModal(isWin) {
 
     var maindiv = document.getElementById("main");
     maindiv.innerHTML = `
-        <div style="color: #e2e8f0; padding: 10px;">
-            <h1 style="color: ${isWin ? '#00ff66' : '#ff0055'}; margin-bottom: 8px; font-size: 22px;">
+        <div style="color: #f1f5f9; padding: 10px;">
+            <h1 style="color: ${isWin ? '#00e676' : '#ff1744'}; margin-bottom: 8px; font-size: 22px;">
                 ${isWin ? '🏆 ZAFER KAZANILDI' : '💥 GÖREV BAŞARISIZ'}
             </h1>
             <p style="font-size: 13px; color: #94a3b8; margin-bottom: 16px;">
-                ${isWin ? 'Düşman üssü haritadan silindi.' : 'Savunma hatlarımız yarıldı.'}
+                ${isWin ? (lvl >= 9 ? 'Tüm harekat başarıyla tamamlandı!' : 'Bölge temizlendi, sonraki cepheye ilerleniyor.') : 'Savunma hatlarımız yarıldı.'}
             </p>
-            <div style="background: rgba(13, 19, 33, 0.85); border: 1px solid rgba(0, 240, 255, 0.2); padding: 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; text-align: left;">
+            <div style="background: rgba(13, 20, 31, 0.9); border: 1px solid rgba(0, 229, 255, 0.25); padding: 14px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; text-align: left;">
+                <div style="margin-bottom: 6px;">Tamamlanan Kademe: <b style="color: #00e5ff;">${dif[lvl]}</b></div>
                 <div style="margin-bottom: 6px;">Ulaşılan Dalga: <b style="color: #fff;">${currentWaveNum}</b></div>
                 <div style="margin-bottom: 6px;">Yok Edilen: <b style="color: #fff;">${kills}</b></div>
-                <div style="color: #ffb703; font-weight: bold; margin-bottom: 4px;">Hurda Kazancı: +${sessionGold} 🪙</div>
-                <div style="color: #00f0ff; font-weight: bold;">Tecrübe: +${sessionXp} XP ${leveledUp ? '🎉 (SEVİYE ATLADIN!)' : ''}</div>
+                <div style="color: #ffd700; font-weight: bold; margin-bottom: 4px;">Hurda Kazancı: +${sessionGold} 🪙</div>
+                <div style="color: #00e5ff; font-weight: bold;">Tecrübe: +${sessionXp} XP ${leveledUp ? '🎉 (SEVİYE ATLADIN!)' : ''}</div>
             </div>
-            <button onclick="startGame()" style="width: 100%; margin-bottom: 10px;">TEKRAR DENE</button>
-            <button onclick="openWorkshop()" style="width: 100%; margin-bottom: 10px; background: rgba(255, 183, 3, 0.15); border-color: #ffb703; color: #ffb703;">🎖 BİRLİK KIŞLASI</button>
-            <button onclick="loader()" style="background: transparent; color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.1); width: 100%;">ANA MENÜ</button>
+
+            ${isWin ? `
+                <button id="start" onclick="nextStageAction()" style="width: 100%; margin-bottom: 10px;">
+                    ${lvl >= 9 ? 'KAMPANYA TAMAMLANDI (TEKRAR OYNA)' : 'SONRAKİ AŞAMA ❯'}
+                </button>
+            ` : `
+                <button id="start" onclick="startGame()" style="width: 100%; margin-bottom: 10px;">
+                    TEKRAR DENE
+                </button>
+            `}
+
+            <button onclick="openWorkshop()" class="btn-barracks" style="width: 100%; margin-bottom: 10px;">🎖 KIŞLA & DESTE</button>
+            <button onclick="loader()" style="background: transparent; color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.12); width: 100%;">ANA MENÜ</button>
         </div>
     `;
 }
 
-// --- ATÖLYE & DECK BUILDER KIŞLASI ---
+// --- ATÖLYE & DECK BUILDER ---
 function openWorkshop() {
     var maindiv = document.getElementById("main");
     var keys = ['infantry', 'assault', 'engineer', 'flak', 'heavy', 'drone', 'plasma'];
     var html = `
-        <div style="color: #e2e8f0; padding: 6px; max-height: 82vh; overflow-y: auto;">
-            <h2 style="color: #00f0ff; font-size: 18px; margin-bottom: 2px;">🎖 BİRLİK KIŞLASI</h2>
-            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">
-                Komutan: <b style="color:#00ff66;">Sv. ${PlayerData.level}</b> | Hurda: <b style="color:#ffb703;">${PlayerData.gold} 🪙</b>
+        <div style="color: #f1f5f9; padding: 4px; max-height: 82vh; overflow-y: auto;">
+            <h2 style="color: #00e5ff; font-size: 20px; margin-bottom: 4px;">🎖 BİRLİK KIŞLASI</h2>
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 10px;">
+                Komutan: <b style="color:#00e676;">Sv. ${PlayerData.level}</b> | Hurda: <b style="color:#ffd700;">${PlayerData.gold} 🪙</b>
             </div>
 
-            <div style="background: rgba(0, 240, 255, 0.06); border: 1px solid rgba(0, 240, 255, 0.4); border-radius: 8px; padding: 8px; margin-bottom: 12px;">
-                <div style="font-size: 11px; font-weight: bold; color: #00f0ff; margin-bottom: 6px; letter-spacing: 1px;">SAVAŞ DESTESİ (${PlayerData.deck.length}/4)</div>
-                <div style="display: flex; gap: 6px; justify-content: center;">
+            <div style="background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 12px; padding: 10px; margin-bottom: 14px;">
+                <div style="font-size: 12px; font-weight: bold; color: #00e5ff; margin-bottom: 8px; letter-spacing: 1px;">SAVAŞ DESTESİ (${PlayerData.deck.length}/4)</div>
+                <div style="display: flex; gap: 8px; justify-content: center;">
     `;
 
     for (var d = 0; d < 4; d++) {
@@ -712,14 +701,14 @@ function openWorkshop() {
         if (cardKey && UNIT_TYPES[cardKey]) {
             var cInfo = UNIT_TYPES[cardKey];
             html += `
-                <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid ${cInfo.color}; border-radius: 6px; padding: 4px 6px; min-width: 60px; text-align: center;">
-                    <div style="font-size: 10px; font-weight: bold; color: ${cInfo.color};">${cInfo.name}</div>
-                    <div style="font-size: 9px; color: #00f0ff;">${cInfo.cost}⚡</div>
+                <div style="background: #16202e; border: 1.5px solid ${cInfo.color}; border-radius: 8px; padding: 6px 8px; min-width: 64px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: bold; color: ${cInfo.color};">${cInfo.name}</div>
+                    <div style="font-size: 10px; color: #00e5ff; font-weight: bold;">${cInfo.cost}⚡</div>
                 </div>
             `;
         } else {
             html += `
-                <div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px; padding: 4px 6px; min-width: 60px; text-align: center; color: #64748b; font-size: 10px;">
+                <div style="background: rgba(255,255,255,0.02); border: 1.5px dashed rgba(255,255,255,0.15); border-radius: 8px; padding: 6px 8px; min-width: 64px; text-align: center; color: #64748b; font-size: 11px;">
                     Boş
                 </div>
             `;
@@ -730,7 +719,7 @@ function openWorkshop() {
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
     `;
 
     for (var kType of keys) {
@@ -742,22 +731,22 @@ function openWorkshop() {
         var canAfford = PlayerData.gold >= cost;
 
         html += `
-            <div style="background: rgba(15, 23, 42, 0.7); padding: 8px 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid ${inDeck ? '#00f0ff' : (isUnlocked ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255,255,255,0.05)')}; opacity: ${isUnlocked ? 1 : 0.5};">
+            <div style="background: #141c28; padding: 10px 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid ${inDeck ? '#00e5ff' : 'rgba(255,255,255,0.08)'}; opacity: ${isUnlocked ? 1 : 0.5};">
                 <div style="text-align: left;">
-                    <div style="font-weight: bold; font-size: 13px; color: ${isUnlocked ? t.color : '#64748b'};">
-                        ${t.name} ${isUnlocked ? `<span style="color: #fff; font-size: 10px;">(Sv. ${upgLvl})</span>` : `<span style="color: #ff0055; font-size: 10px;">(Sv. ${t.unlockLevel})</span>`}
+                    <div style="font-weight: bold; font-size: 14px; color: ${isUnlocked ? t.color : '#64748b'};">
+                        ${t.name} ${isUnlocked ? `<span style="color: #fff; font-size: 11px;">(Sv. ${upgLvl})</span>` : `<span style="color: #ff1744; font-size: 11px;">(Sv. ${t.unlockLevel})</span>`}
                     </div>
-                    <div style="font-size: 10px; color: #94a3b8;">Maliyet: ${t.cost}⚡ | Bonus: +%${(upgLvl - 1) * 18}</div>
+                    <div style="font-size: 11px; color: #94a3b8;">Maliyet: ${t.cost}⚡ | Bonus: +%${(upgLvl - 1) * 18}</div>
                 </div>
                 <div style="display: flex; gap: 6px; align-items: center;">
                     ${isUnlocked ? `
-                        <button onclick="toggleDeckCardAction('${kType}')" style="padding: 4px 8px; font-size: 10px; background: ${inDeck ? 'rgba(255, 0, 85, 0.2)' : 'rgba(0, 255, 102, 0.2)'}; border-color: ${inDeck ? '#ff0055' : '#00ff66'}; color: #fff;">
+                        <button onclick="toggleDeckCardAction('${kType}')" style="padding: 6px 10px; font-size: 11px; background: ${inDeck ? '#ff1744' : '#00e676'}; color: #fff;">
                             ${inDeck ? 'ÇIKAR' : 'SEÇ'}
                         </button>
-                        <button onclick="applyUpgrade('${kType}')" style="padding: 4px 8px; font-size: 10px; background: ${canAfford ? 'rgba(255, 183, 3, 0.2)' : 'transparent'}; border-color: ${canAfford ? '#ffb703' : 'rgba(255,255,255,0.1)'}; color: #ffb703;" ${canAfford ? '' : 'disabled'}>
+                        <button onclick="applyUpgrade('${kType}')" style="padding: 6px 10px; font-size: 11px; background: ${canAfford ? '#ffd700' : '#253245'}; color: ${canAfford ? '#000' : '#888'};" ${canAfford ? '' : 'disabled'}>
                             ${cost} 🪙
                         </button>
-                    ` : `<span style="font-size: 14px;">🔒</span>`}
+                    ` : `<span style="font-size: 16px;">🔒</span>`}
                 </div>
             </div>
         `;
@@ -765,7 +754,7 @@ function openWorkshop() {
 
     html += `
             </div>
-            <button onclick="loader()" style="width: 100%;">ANA MENÜYE DÖN</button>
+            <button onclick="loader()" style="width: 100%; background: #1e293b; color: #fff;">ANA MENÜYE DÖN</button>
         </div>
     `;
     maindiv.innerHTML = html;
@@ -868,7 +857,7 @@ function startGame() {
                 for (var i = 0; i < enemies.length; i++) {
                     if (Math.hypot(enemies[i].pos[0] - mouse.x, enemies[i].pos[1] - mouse.y) < airstrikeSkill.radius) {
                         enemies[i].hp -= airstrikeSkill.dmg;
-                        addFloatText("-" + airstrikeSkill.dmg, enemies[i].pos, '#ff0055');
+                        addFloatText("-" + airstrikeSkill.dmg, enemies[i].pos, '#ff1744');
                     }
                 }
                 for (var o = 0; o < obstacles.length; o++) {
@@ -976,13 +965,15 @@ function update(dt) {
 
     for (var u = units.length - 1; u >= 0; u--) {
         units[u].update(dt, enemies, units);
+        
+        // Aşama Tamamlama Kontrolü
         if (units[u].pos[1] < k * 1.5) {
-            if (lvl < 9) lvl++;
             sessionGold += 100;
             sessionXp += 150;
             showEndModal(true);
             return;
         }
+
         if (units[u].hp <= 0) {
             triggerExplosion(units[u].pos, false);
             if (units[u].category === 'tank') addWreck(units[u].pos, units[u].size);
@@ -1003,10 +994,10 @@ function update(dt) {
 
             var elixirGain = enemies[e].isBoss ? 3.0 : 0.8;
             energy = Math.min(maxEnergy, energy + elixirGain);
-            addFloatText("+" + elixirGain.toFixed(1) + "⚡", [enemies[e].pos[0] - 15, enemies[e].pos[1] - 10], '#00f0ff');
+            addFloatText("+" + elixirGain.toFixed(1) + "⚡", [enemies[e].pos[0] - 15, enemies[e].pos[1] - 10], '#00e5ff');
             SoundFX.playElixir();
 
-            addFloatText("+" + earnedGold + "🪙", enemies[e].pos, '#ffb703');
+            addFloatText("+" + earnedGold + "🪙", enemies[e].pos, '#ffd700');
             SoundFX.playCoin();
 
             triggerExplosion(enemies[e].pos, enemies[e].isBoss);
@@ -1046,7 +1037,7 @@ function update(dt) {
                     }
 
                     target.hp -= bullet.damage;
-                    addFloatText("-" + Math.round(bullet.damage), target.pos, (bullet.dir === 1) ? '#ff0055' : '#ffb703');
+                    addFloatText("-" + Math.round(bullet.damage), target.pos, (bullet.dir === 1) ? '#ff1744' : '#ff9100');
                     hit = true;
                     break;
                 }
@@ -1075,11 +1066,9 @@ function render() {
 
     var currentMap = MAPS[currentMapIdx];
 
-    // Harita Zemini
     ctx.fillStyle = currentMap.bgColor;
     ctx.fillRect(0, 0, c.width, c.height);
 
-    // Taktiksel Radar Izgarası
     ctx.strokeStyle = currentMap.gridColor;
     ctx.lineWidth = 1;
     for (var gx = 0; gx < c.width; gx += 40) {
@@ -1095,7 +1084,6 @@ function render() {
         ctx.stroke();
     }
 
-    // Palet İzleri
     for (var i = 0; i < tracks.length; i++) {
         var trk = tracks[i];
         ctx.save();
@@ -1107,7 +1095,6 @@ function render() {
         ctx.restore();
     }
 
-    // Enkazlar
     for (var w = 0; w < wrecks.length; w++) {
         var wrk = wrecks[w];
         ctx.fillStyle = '#0a0d13';
@@ -1124,13 +1111,12 @@ function render() {
         }
     }
 
-    // Siperler
     for (var o = 0; o < obstacles.length; o++) {
         var ob = obstacles[o];
         if (ob.hp > 0) {
             ctx.fillStyle = currentMap.wallColor;
             ctx.fillRect(ob.pos[0] - ob.size[0] / 2, ob.pos[1] - ob.size[1] / 2, ob.size[0], ob.size[1]);
-            ctx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+            ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
             ctx.lineWidth = 1.5;
             ctx.strokeRect(ob.pos[0] - ob.size[0] / 2, ob.pos[1] - ob.size[1] / 2, ob.size[0], ob.size[1]);
 
@@ -1142,31 +1128,30 @@ function render() {
         }
     }
 
-    // Hedef Hattı
-    ctx.fillStyle = 'rgba(0, 255, 102, 0.12)';
+    ctx.fillStyle = 'rgba(0, 230, 118, 0.15)';
     ctx.fillRect(0, 0, c.width, k * 2);
-    ctx.strokeStyle = '#00ff66';
+    ctx.strokeStyle = '#00e676';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, c.width, k * 2);
 
     if (selectedCard) {
-        ctx.fillStyle = 'rgba(0, 240, 255, 0.05)';
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.08)';
         ctx.fillRect(8, c.height * 0.48, c.width - 16, c.height * 0.52 - c.width / 3.8);
-        ctx.strokeStyle = '#00f0ff';
+        ctx.strokeStyle = '#00e5ff';
         ctx.setLineDash([8, 8]);
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.strokeRect(8, c.height * 0.48, c.width - 16, c.height * 0.52 - c.width / 3.8);
         ctx.setLineDash([]);
     }
 
     if (airstrikeSkill.active) {
         ctx.save();
-        ctx.strokeStyle = '#ff0055';
+        ctx.strokeStyle = '#ff1744';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(mouse.x, mouse.y, airstrikeSkill.radius, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.fillStyle = 'rgba(255, 0, 85, 0.15)';
+        ctx.fillStyle = 'rgba(255, 23, 68, 0.2)';
         ctx.fill();
         ctx.restore();
     }
@@ -1174,7 +1159,6 @@ function render() {
     for (var e = 0; e < enemies.length; e++) enemies[e].render(ctx);
     for (var u = 0; u < units.length; u++) units[u].render(ctx);
 
-    // 2. Neon Mermi Işıltısı (Bloom / Glow)
     for (var b = 0; b < bullets.length; b++) {
         var bul = bullets[b];
         ctx.save();
@@ -1187,7 +1171,6 @@ function render() {
         ctx.restore();
     }
 
-    // Parçacıklar
     for (var p = 0; p < particles.length; p++) {
         var part = particles[p];
         ctx.fillStyle = part.color;
@@ -1198,7 +1181,6 @@ function render() {
     }
     ctx.globalAlpha = 1;
 
-    // Yüzen Metinler
     ctx.font = 'bold 12px Rajdhani, sans-serif';
     for (var f = 0; f < floatTexts.length; f++) {
         var ft = floatTexts[f];
@@ -1208,42 +1190,38 @@ function render() {
     }
     ctx.globalAlpha = 1;
 
-    // --- HUD (ÜST BİLGİ PANELİ) ---
-    ctx.fillStyle = 'rgba(7, 10, 15, 0.88)';
+    // HUD
+    ctx.fillStyle = 'rgba(13, 20, 31, 0.9)';
     ctx.fillRect(0, 0, c.width, 42);
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.25)';
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, 42);
-    ctx.lineTo(c.width, 42);
-    ctx.stroke();
+    ctx.strokeRect(0, 0, c.width, 42);
 
     ctx.font = 'bold 12px Orbitron, sans-serif';
-    ctx.fillStyle = '#00f0ff';
+    ctx.fillStyle = '#00e5ff';
     ctx.fillText("SV." + PlayerData.level, 12, 26);
-    ctx.fillStyle = '#ffb703';
+    ctx.fillStyle = '#ffd700';
     ctx.fillText(sessionGold + " 🪙", 70, 26);
 
-    ctx.fillStyle = '#e2e8f0';
+    ctx.fillStyle = '#f1f5f9';
     ctx.fillText("DALGA " + currentWaveNum, c.width / 2 - 32, 26);
 
-    // Roket Butonu
-    ctx.fillStyle = (energy >= airstrikeSkill.cost) ? (airstrikeSkill.active ? 'rgba(255, 0, 85, 0.4)' : 'rgba(15, 23, 42, 0.8)') : 'rgba(7, 10, 15, 0.6)';
+    ctx.fillStyle = (energy >= airstrikeSkill.cost) ? (airstrikeSkill.active ? '#d50000' : '#1e293b') : '#0f172a';
     ctx.fillRect(c.width - 94, 8, 86, 26);
-    ctx.strokeStyle = (airstrikeSkill.active) ? '#ff0055' : 'rgba(0, 240, 255, 0.3)';
+    ctx.strokeStyle = (airstrikeSkill.active) ? '#ff1744' : '#00e5ff';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(c.width - 94, 8, 86, 26);
     ctx.font = 'bold 11px Orbitron, sans-serif';
-    ctx.fillStyle = (energy >= airstrikeSkill.cost) ? '#ffb703' : '#64748b';
+    ctx.fillStyle = (energy >= airstrikeSkill.cost) ? '#ffd700' : '#64748b';
     ctx.fillText("🚀 ROKET", c.width - 84, 25);
 
     if (activeBoss && activeBoss.hp > 0) {
         var bPct = Math.max(0, activeBoss.hp / activeBoss.maxhp);
         ctx.fillStyle = 'rgba(7, 10, 15, 0.85)';
         ctx.fillRect(20, 50, c.width - 40, 16);
-        ctx.fillStyle = '#ff0055';
+        ctx.fillStyle = '#d50000';
         ctx.fillRect(22, 52, (c.width - 44) * bPct, 12);
-        ctx.strokeStyle = '#ff0055';
+        ctx.strokeStyle = '#ff1744';
         ctx.lineWidth = 1.5;
         ctx.strokeRect(20, 50, c.width - 40, 16);
         ctx.font = 'bold 10px Orbitron';
@@ -1253,19 +1231,18 @@ function render() {
         ctx.textAlign = 'left';
     }
 
-    // --- ALT KOKPİT (ENERJİ TÜPÜ VE KARTLAR) ---
+    // ALT KOKPİT
     var cardBarH = c.width / 3.8;
     var barY = c.height - cardBarH;
 
-    ctx.fillStyle = 'rgba(7, 10, 15, 0.94)';
+    ctx.fillStyle = '#0d141f';
     ctx.fillRect(0, barY - 16, c.width, cardBarH + 16);
 
-    // Neon Enerji Barı
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+    ctx.fillStyle = '#16202e';
     ctx.fillRect(0, barY - 16, c.width, 10);
-    ctx.fillStyle = '#00f0ff';
+    ctx.fillStyle = '#00e5ff';
     ctx.shadowBlur = 6;
-    ctx.shadowColor = '#00f0ff';
+    ctx.shadowColor = '#00e5ff';
     ctx.fillRect(0, barY - 16, (c.width * (energy / maxEnergy)), 10);
     ctx.shadowBlur = 0;
 
@@ -1281,16 +1258,16 @@ function render() {
         var cx = cIdx * colW;
         var cy = barY;
 
-        ctx.fillStyle = (energy >= info.cost) ? 'rgba(15, 23, 42, 0.85)' : 'rgba(7, 10, 15, 0.9)';
+        ctx.fillStyle = (energy >= info.cost) ? '#16202e' : '#0a0f17';
         ctx.fillRect(cx + 4, cy + 4, colW - 8, cardBarH - 8);
-        ctx.strokeStyle = (selectedCard === card) ? '#00f0ff' : 'rgba(0, 240, 255, 0.2)';
+        ctx.strokeStyle = (selectedCard === card) ? '#00e5ff' : 'rgba(0, 229, 255, 0.3)';
         ctx.lineWidth = (selectedCard === card) ? 2 : 1;
         ctx.strokeRect(cx + 4, cy + 4, colW - 8, cardBarH - 8);
 
         ctx.fillStyle = info.color;
         ctx.fillRect(cx + colW / 2 - 8, cy + 12, 16, 20);
 
-        ctx.fillStyle = '#ffb703';
+        ctx.fillStyle = '#ffd700';
         ctx.font = 'bold 9px Orbitron';
         ctx.fillText("Sv." + upgLvl, cx + 7, cy + 15);
 
@@ -1299,7 +1276,7 @@ function render() {
         ctx.textAlign = 'center';
         ctx.fillText(info.name, cx + colW / 2, cy + cardBarH - 22);
 
-        ctx.fillStyle = '#00f0ff';
+        ctx.fillStyle = '#00e5ff';
         ctx.fillText(info.cost + "⚡", cx + colW / 2, cy + cardBarH - 8);
         ctx.textAlign = 'left';
     }
@@ -1317,6 +1294,7 @@ function render() {
     ctx.restore();
 }
 
+// --- ANA MENÜ (LOADER) ---
 function loader() {
     PlayerData.init();
 
@@ -1326,36 +1304,44 @@ function loader() {
 
     var maindiv = document.getElementById("main");
     maindiv.innerHTML = `
-        <div style="margin-bottom: 14px;">
-            <span style="font-size: 15px; font-weight: bold; color: #00f0ff; letter-spacing: 1px;">KOMUTAN SV. ${PlayerData.level}</span>
-            <div style="background: rgba(15, 23, 42, 0.9); height: 8px; border-radius: 4px; width: 80%; margin: 8px auto; overflow: hidden; border: 1px solid rgba(0, 240, 255, 0.2);">
-                <div style="background: #00ff66; height: 100%; width: ${(PlayerData.xp / xpTarget) * 100}%;"></div>
+        <div style="margin-bottom: 20px;">
+            <div style="font-size: 17px; font-weight: 800; color: #00e5ff; letter-spacing: 1px; font-family: 'Orbitron';">
+                Komutan Sv. ${PlayerData.level}
             </div>
-            <span style="font-size: 11px; color: #94a3b8;">${PlayerData.xp} / ${xpTarget} XP</span>
-        </div>
-        <button id="start" onclick="startGame()">Savaşı Başlat</button>
-        <button onclick="openWorkshop()" style="margin-left: 6px; background: rgba(255, 183, 3, 0.12); border-color: #ffb703; color: #ffb703;">🎖 Kışla & Deste</button>
-        <button id="info" onclick="inf()">Rehber</button><br/>
-
-        <div style="margin-top: 14px;">
-            <span style="font-size: 11px; color: #94a3b8; letter-spacing: 1px;">HAREKAT BÖLGESİ:</span><br/>
-            <button onclick="changeMap(-1)" style="padding: 4px 10px; font-size: 11px;">&lt;</button>
-            <span id="current-map-name" style="color: #00f0ff; font-weight: bold; font-size: 13px; margin: 0 10px;">${MAPS[currentMapIdx].name}</span>
-            <button onclick="changeMap(1)" style="padding: 4px 10px; font-size: 11px;">&gt;</button>
+            <div style="background: #1a2332; height: 10px; border-radius: 5px; width: 85%; margin: 10px auto; overflow: hidden; box-shadow: inset 0 0 5px rgba(0,0,0,0.5);">
+                <div style="background: #00e676; height: 100%; width: ${(PlayerData.xp / xpTarget) * 100}%; box-shadow: 0 0 10px #00e676;"></div>
+            </div>
+            <div style="font-size: 12px; color: #94a3b8; font-weight: 600;">${PlayerData.xp} / ${xpTarget} XP</div>
         </div>
 
-        <div style="margin-top: 8px;">
-            <span class="dif">ZORLUK:</span><br/>
-            <button id="btn-left" onclick="changeLvl(0)">&lt;</button>
+        <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 20px;">
+            <button id="start" onclick="startGame()">Savaşı Başlat</button>
+            <button onclick="openWorkshop()" class="btn-barracks">🎖 Kışla</button>
+            <button id="info" onclick="inf()">Rehber</button>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 4px;">Harita:</div>
+            <button onclick="changeMap(-1)" class="btn-nav">&lt;</button>
+            <span id="current-map-name" style="color: #00e5ff; font-weight: bold; font-size: 15px; margin: 0 10px;">${MAPS[currentMapIdx].name}</span>
+            <button onclick="changeMap(1)" class="btn-nav">&gt;</button>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <div style="font-size: 14px; font-weight: 900; color: #00e5ff; font-family: 'Orbitron'; letter-spacing: 1.5px; margin-bottom: 8px;">
+                ZORLUK:
+            </div>
+            <button id="btn-left" onclick="changeLvl(0)" class="btn-nav">&lt;</button>
             <span class="dif">${dif[lvl]}</span>
-            <button id="btn-right" onclick="changeLvl(1)">&gt;</button>
+            <button id="btn-right" onclick="changeLvl(1)" class="btn-nav">&gt;</button>
         </div>
 
-        <div style="margin-top: 14px; font-size: 13px; color: #ffb703; font-weight: bold;">
+        <div style="font-size: 16px; color: #ffd700; font-weight: bold; margin-bottom: 12px;">
             Mevcut Hurda: ${PlayerData.gold} 🪙
         </div>
-        <div style="margin-top: 8px; font-size: 12px; color: #94a3b8; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px;">
-            En Yüksek Skor: <span style="color: #00f0ff;">Dalga ${bestWave}</span> | <span style="color: #ff0055;">${bestKills} İmha</span>
+
+        <div style="font-size: 13px; color: #94a3b8; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 12px;">
+            En Yüksek Skor: <span style="color: #00e5ff; font-weight: bold;">Dalga ${bestWave}</span> | <span style="color: #ff1744; font-weight: bold;">${bestKills} İmha</span>
         </div>
     `;
 }
@@ -1371,7 +1357,7 @@ var changeLvl = function (op) {
     if (op === 1 && lvl < 9) lvl++;
     if (op === 0 && lvl > 0) lvl--;
     var _dif = document.getElementsByClassName("dif");
-    if (_dif.length > 1) _dif[1].innerHTML = dif[lvl];
+    if (_dif.length > 0) _dif[0].innerHTML = dif[lvl];
 };
 
 loader();

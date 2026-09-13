@@ -3,25 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zırhlı Birlikler: Taktiksel Muharebe</title>
+    <title>Tank Tactics: Zırhlı Muharebe</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="main">
-        <p>Yükleniyor...</p>
-    </div>
-    
+    <div id="main"></div>
+
     <div id="infdiv">
-        <span class="close" onclick="inf()" style="position: absolute; right: 15px; top: 10px; cursor: pointer; font-size: 22px; color: #ff5252;">&times;</span>
-        <h3 style="color: #00e5ff; margin-top: 5px;">KOMUTAN HAREKAT REHBERİ</h3>
-        <p style="text-align: left; font-size: 13px; line-height: 1.6;">
-            • <b>Konuşlandırma:</b> Alt bardaki kartları ekranın alt yarısına sürükleyip bırakarak birliklerini sahaya sür.<br/>
-            • <b>Zafer Koşulu:</b> Birliklerinden biri ekranın tepesindeki yeşil hedef çizgisine ulaştığında harita kazanılır.<br/>
-            • <b>Enerji (İksir):</b> Zamanla dolar, ayrıca <b>yok ettiğin her düşmandan enerji kazanırsın!</b><br/>
-            • <b>Hava Desteği:</b> Sağ üstteki roket butonuyla kritik alanlara ağır bombardıman çağır.<br/>
-            • <b>Kışla:</b> Seviye atladıkça yeni birliklerin kilidini aç ve hurda ile güçlendir.
-        </p>
-        <button onclick="inf()" style="width: 100%; margin-top: 10px; background-color: #00e5ff; color: #0d1117;">ANLADIM, KOMUTAN!</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(0, 229, 255, 0.25); padding-bottom: 8px;">
+            <h3 style="color: #00e5ff; font-size: 16px;">KOMUTA REHBERİ</h3>
+            <span class="close" onclick="inf()" style="cursor: pointer; color: #ff1744; font-weight: bold; font-size: 18px;">&times;</span>
+        </div>
+        <div style="font-size: 13px; line-height: 1.6; color: #cbd5e1; text-align: left;">
+            <p>• <b>Hedef:</b> Birliklerini haritanın altındaki kokpitten sürükleyip sahaya bırakarak düşman hattının en tepesindeki yeşil hedef çizgisine ulaştır.</p>
+            <p style="margin-top: 6px;">• <b>Deste Yönetimi:</b> 🎖 Kışla menüsünden 4 adet savaş birimi seçip desteni dilediğin gibi özelleştir.</p>
+            <p style="margin-top: 6px;">• <b>Engeller & Taktik:</b> Beton siperlere yalnızca düşman birlikleri takılır. Kendi zırhlı birliklerin engelleri es geçerek ilerler.</p>
+            <p style="margin-top: 6px;">• <b>Hava Desteği:</b> 5 enerjin olduğunda sağ üstteki 🚀 ROKET butonunu aktif edip alana tıklayarak hava bombardımanı çağırabilirsin.</p>
+        </div>
     </div>
 
     <script src="script.js"></script>
