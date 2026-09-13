@@ -1445,7 +1445,7 @@ var inf = function () {
     }
 };
 
-var changeLvl = function (op) {
+var changeLvl = function (op) { 
     if (op === 1 && lvl < 9) lvl++;
     if (op === 0 && lvl > 0) lvl--;
     var _dif = document.getElementsByClassName("dif");
