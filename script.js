@@ -330,7 +330,7 @@ var c, ctx, k, xo, yo;
 var units = [], enemies = [], bullets = [], particles = [], tracks = [], floatTexts = [];
 var obstacles = [], wrecks = [];
 var shakeDuration = 0, shakeIntensity = 0;
-var gameTime = 0, isGameOver = false, nextwave = 0, lvl = 0, currentWaveNum = 0;
+var gameTime = 0, isGameOver = false, isPaused = false, nextwave = 0, lvl = 0, currentWaveNum = 0;
 var kills = 0, sessionGold = 0, sessionXp = 0;
 var energy = 4, maxEnergy = 10, energyRate = 1.35;
 var activeBoss = null;
@@ -446,7 +446,6 @@ Unit.prototype.update = function (dt, targets, allies) {
         this.turretAngle += diffTurret * Math.min(1, dt * 5);
     }
 
-    // Bizim birlikler engelleri es geçer, sadece düşman takılır
     if (!isStopped && this.dir === -1) {
         var nextY = this.pos[1] + Math.sin(this.bodyAngle) * this.speed * dt;
         for (var o = 0; o < obstacles.length; o++) {
@@ -507,7 +506,6 @@ Unit.prototype.render = function (ctx) {
     ctx.save();
     ctx.translate(this.pos[0], this.pos[1]);
 
-    // Zemin Gölgesi
     ctx.save();
     ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.beginPath();
@@ -627,6 +625,72 @@ function triggerExplosion(pos, isBig) {
     }
 }
 
+// --- DURAKLATMA (PAUSE) SİSTEMİ ---
+function togglePause() {
+    if (isGameOver) return;
+    isPaused = !isPaused;
+    SoundFX.playRadio();
+
+    var pauseDiv = document.getElementById("pause-modal");
+    if (!pauseDiv) {
+        pauseDiv = document.createElement("div");
+        pauseDiv.id = "pause-modal";
+        pauseDiv.style.position = "fixed";
+        pauseDiv.style.top = "50%";
+        pauseDiv.style.left = "50%";
+        pauseDiv.style.transform = "translate(-50%, -50%)";
+        pauseDiv.style.background = "#0d141f";
+        pauseDiv.style.border = "2px solid #00e5ff";
+        pauseDiv.style.boxShadow = "0 0 50px rgba(0, 229, 255, 0.35), 0 20px 60px rgba(0,0,0,0.9)";
+        pauseDiv.style.borderRadius = "16px";
+        pauseDiv.style.padding = "28px 32px";
+        pauseDiv.style.textAlign = "center";
+        pauseDiv.style.zIndex = "1000";
+        pauseDiv.style.width = "85vw";
+        pauseDiv.style.maxWidth = "360px";
+        document.body.appendChild(pauseDiv);
+    }
+
+    if (isPaused) {
+        pauseDiv.style.display = "block";
+        pauseDiv.innerHTML = `
+            <h2 style="color: #00e5ff; font-family: 'Orbitron'; font-size: 20px; margin-bottom: 6px; letter-spacing: 1px;">⏸ HAREKAT DURAKLATILDI</h2>
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">Savaş alanı donduruldu.</div>
+            <button id="start" onclick="togglePause()" style="width: 100%; margin-bottom: 10px;">DEVAM ET</button>
+            <button onclick="restartBattle()" class="btn-barracks" style="width: 100%; margin-bottom: 10px;">YENİDEN BAŞLAT</button>
+            <button onclick="quitToMenu()" style="background: transparent; color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.15); width: 100%;">ÜSSE DÖN (ANA MENÜ)</button>
+        `;
+    } else {
+        pauseDiv.style.display = "none";
+        lastTime = Date.now(); // dt sıçramasını engelle
+    }
+}
+
+function restartBattle() {
+    var pauseDiv = document.getElementById("pause-modal");
+    if (pauseDiv) pauseDiv.style.display = "none";
+    isPaused = false;
+    startGame();
+}
+
+function quitToMenu() {
+    var pauseDiv = document.getElementById("pause-modal");
+    if (pauseDiv) pauseDiv.style.display = "none";
+    isPaused = false;
+    isGameOver = true;
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+    loader();
+}
+
+// ESC VE P TUŞLARI İLE DURAKLATMA
+window.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" || e.key === "p" || e.key === "P") {
+        if (!isGameOver && document.getElementById("c")) {
+            togglePause();
+        }
+    }
+});
+
 // --- AŞAMA VE OYUN SONU AKIŞI ---
 function nextStageAction() {
     if (lvl < 9) {
@@ -638,6 +702,9 @@ function nextStageAction() {
 function showEndModal(isWin) {
     isGameOver = true;
     if (animFrameId) cancelAnimationFrame(animFrameId);
+
+    var pauseDiv = document.getElementById("pause-modal");
+    if (pauseDiv) pauseDiv.style.display = "none";
 
     PlayerData.gold += sessionGold;
     var leveledUp = PlayerData.addXp(sessionXp);
@@ -806,8 +873,12 @@ function startGame() {
         energy = 4;
         nextwave = 3;
         isGameOver = false;
+        isPaused = false;
         activeBoss = null;
         airstrikeSkill.active = false;
+
+        var pauseDiv = document.getElementById("pause-modal");
+        if (pauseDiv) pauseDiv.style.display = "none";
 
         var maindiv = document.getElementById("main");
         maindiv.innerHTML = '<canvas id="c"></canvas>';
@@ -838,12 +909,20 @@ function startGame() {
         });
 
         c.addEventListener("mousedown", function (e) {
+            if (isPaused) return;
             resizeCalc();
             mouse.down = true;
             mouse.x = e.clientX - xo;
             mouse.y = e.clientY - yo;
 
-            if (mouse.x > c.width - 92 && mouse.x < c.width - 10 && mouse.y > 6 && mouse.y < 32) {
+            // Duraklatma (Pause) Butonu Tıklaması (x: c.width - 34 .. c.width - 8, y: 8 .. 34)
+            if (mouse.x > c.width - 34 && mouse.x < c.width - 8 && mouse.y > 8 && mouse.y < 34) {
+                togglePause();
+                return;
+            }
+
+            // Roket Yeteneği Tıklaması
+            if (mouse.x > c.width - 124 && mouse.x < c.width - 40 && mouse.y > 8 && mouse.y < 34) {
                 if (energy >= airstrikeSkill.cost) airstrikeSkill.active = !airstrikeSkill.active;
                 return;
             }
@@ -880,6 +959,7 @@ function startGame() {
         });
 
         c.addEventListener("mouseup", function () {
+            if (isPaused) return;
             mouse.down = false;
             if (selectedCard) {
                 if (mouse.y > c.height * 0.48 && mouse.y < c.height - c.width / 3.8) {
@@ -910,7 +990,9 @@ function mainLoop() {
     lastTime = now;
 
     if (!isGameOver) {
-        update(dt);
+        if (!isPaused) {
+            update(dt);
+        }
         render();
         animFrameId = requestAnimationFrame(mainLoop);
     }
@@ -966,7 +1048,6 @@ function update(dt) {
     for (var u = units.length - 1; u >= 0; u--) {
         units[u].update(dt, enemies, units);
         
-        // Aşama Tamamlama Kontrolü
         if (units[u].pos[1] < k * 1.5) {
             sessionGold += 100;
             sessionXp += 150;
@@ -1190,7 +1271,7 @@ function render() {
     }
     ctx.globalAlpha = 1;
 
-    // HUD
+    // --- HUD (ÜST BİLGİ VE BUTONLAR) ---
     ctx.fillStyle = 'rgba(13, 20, 31, 0.9)';
     ctx.fillRect(0, 0, c.width, 42);
     ctx.strokeStyle = 'rgba(0, 229, 255, 0.25)';
@@ -1199,21 +1280,32 @@ function render() {
 
     ctx.font = 'bold 12px Orbitron, sans-serif';
     ctx.fillStyle = '#00e5ff';
-    ctx.fillText("SV." + PlayerData.level, 12, 26);
+    ctx.fillText("SV." + PlayerData.level, 10, 26);
     ctx.fillStyle = '#ffd700';
-    ctx.fillText(sessionGold + " 🪙", 70, 26);
+    ctx.fillText(sessionGold + " 🪙", 65, 26);
 
     ctx.fillStyle = '#f1f5f9';
-    ctx.fillText("DALGA " + currentWaveNum, c.width / 2 - 32, 26);
+    ctx.fillText("DALGA " + currentWaveNum, c.width / 2 - 42, 26);
 
+    // Roket Butonu
     ctx.fillStyle = (energy >= airstrikeSkill.cost) ? (airstrikeSkill.active ? '#d50000' : '#1e293b') : '#0f172a';
-    ctx.fillRect(c.width - 94, 8, 86, 26);
+    ctx.fillRect(c.width - 124, 8, 80, 26);
     ctx.strokeStyle = (airstrikeSkill.active) ? '#ff1744' : '#00e5ff';
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(c.width - 94, 8, 86, 26);
+    ctx.strokeRect(c.width - 124, 8, 80, 26);
     ctx.font = 'bold 11px Orbitron, sans-serif';
     ctx.fillStyle = (energy >= airstrikeSkill.cost) ? '#ffd700' : '#64748b';
-    ctx.fillText("🚀 ROKET", c.width - 84, 25);
+    ctx.fillText("🚀 ROKET", c.width - 116, 25);
+
+    // Duraklatma (Pause) Butonu
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(c.width - 34, 8, 26, 26);
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(c.width - 34, 8, 26, 26);
+    ctx.font = 'bold 13px Segoe UI, sans-serif';
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillText("⏸", c.width - 27, 26);
 
     if (activeBoss && activeBoss.hp > 0) {
         var bPct = Math.max(0, activeBoss.hp / activeBoss.maxhp);
@@ -1231,7 +1323,7 @@ function render() {
         ctx.textAlign = 'left';
     }
 
-    // ALT KOKPİT
+    // --- ALT KOKPİT ---
     var cardBarH = c.width / 3.8;
     var barY = c.height - cardBarH;
 
